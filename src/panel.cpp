@@ -368,11 +368,14 @@ void Panel::setBuff(int16_t x, int16_t y, Panel::Colors c)
   // display
   if (y < HALFROW)
   {
-    pixBuff[y][x] = ((pixBuff[y][x] & BTMMASK) | c) & 0xff;
+    // mask off the top 3 bits (5, 6, and 7) and or it with the color (shifted left 2 bits)
+    pixBuff[y][x] = (uint8_t)(((pixBuff[y][x] & 0xe0) | (c << 2)) & 0xff);
   }
   else
   {
-    pixBuff[y - HALFROW][x] = ((pixBuff[y - HALFROW][x] & TOPMASK) | (c << 4)) & 0xff; 
+    // mask off bits 2, 3, and 4 (the color bits for the upper half), and or it with the
+    // 3 color bits for the upper half
+    pixBuff[y - HALFROW][x] = (uint8_t)(((pixBuff[y - HALFROW][x] & 0x1c) | (c << 5)) & 0xff); 
   }
 }
 
@@ -412,9 +415,9 @@ void Panel::draw()
 * for decent results.
 *
 * With the clock at 16 MHz, this routine was measured to 
-* take a total of 568 us (microseconds).  If you call the
-* routine every 1 ms, you will be using just over half the
-* horsepower of a ATMega 328.
+* take a total of 440 us (microseconds).  If you call the
+* routine every 2 ms, you will be using just under a 
+* quarter of the horsepower of a ATMega 328.
 ********************************************************/
 void Panel::update()
 {
@@ -441,11 +444,12 @@ void Panel::update()
       // the RX/TX pins of the UART which may be used for something else
       PORTD &= 0x03;
 
-      // The panel framebuffer is storing the top physical half in the lower
-      // 4 bits of each byte, while the lower physical half is in the upper
-      // 4 bits of each byte - hence the masking and shifting of bits
-      PORTD |= (((*row & TOPMASK) << 2) | ((*row & BTMMASK) << 1)) & 0xfc;
+      // The panel framebuffer is storing the top physical half in bits 2, 3, and 4
+      // of each byte, while the lower physical half is in bits 5, 6, and 7
+      // of each byte - hence the masking
+      PORTD |= *row & 0xfc;
 
+      // next pixel in this row
       ++row;
 
       // clock this column in

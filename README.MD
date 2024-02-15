@@ -27,7 +27,7 @@ The 6 color output pins are in sequential order on AVR hardware port B to make s
 | Port B | Pin 4 | 12 | LAT | Latch shift register |  
 | Port B | Pin 5 | 13 | OE | Output enable (active low) |  
 
-If you need to reassign pins for the HUB75 display, you'll end up editing `panel_impl.h` and `panel.cpp`.  If you want to reassign the pins used for `R1`, `G1`, `B1`, `R2`, `G2`, or `B2` you're going to end up rewriting the `update()` method in such a way that each update to the panel will take more time.
+If you need to reassign pins for the HUB75 display, you'll end up editing `panel_impl.h` and `panel.cpp`.  If you want to reassign the pins used for `R1`, `G1`, `B1`, `R2`, `G2`, or `B2` you're going to end up rewriting the `update()` method in such a way that each update to the panel will take more time.  Don't do that.
 
 ## Software
 Instantiate a member of the Panel class.  The `begin()` method takes two arguments (with default values); the first defines if the update method will be called from the Timer 2 ISR, and the second defines a coordinate translation method.
@@ -89,7 +89,7 @@ These are the public methods of the library:
   ```
 This can also be used to translate the coordinate system so the panel can be rotated 90 or 270 degrees.
 
-`void update()` - this method needs to be called at a fairly high rate to provide a decent display.  The recommended method as in an ISR, preferably Timer 2 as would be configured in the `begin()` method.  `void update()` has been measured to that 620 us (microseconds) to complete.  If using the Timer 2 update rate of 2 ms (milliseconds) as defined by the `begin()` method, about 1/4 of the ATMega's processing time will be taken up by `update()`, which is fairly reasonable.
+`void update()` - this method needs to be called at a fairly high rate to provide a decent display.  The recommended method as in an ISR, preferably Timer 2 as would be configured in the `begin()` method.  `void update()` has been measured to that 440 us (microseconds) to complete.  If using the Timer 2 update rate of 2 ms (milliseconds) as defined by the `begin()` method, about 1/4 of the ATMega's processing time will be taken up by `update()`, which is fairly reasonable.
 
 `void draw()` - all "drawing" on the panel done by the library methods are done to the local framebuffer and won't actually be written to the display panel until the `draw()` method is called.  This prevents flickering of the display.  Basically, draw whatever you want on the display, then call `draw()` to copy that to the output framebuffer that the `update()` method uses.
 `void clear()` - erases the display by setting all pixels to black (remember to call `draw()` for it to take affect)
@@ -121,6 +121,29 @@ This can also be used to translate the coordinate system so the panel can be rot
 
 `Panel::Colors getPixel(int16_t x, int16_t y)` - return a member of the `Colors` enum for the color of the given pixel
 
+# Gorey details of things
+Since this library is only 8 colors, we only need 3 bits to represent those 8 colors for a single pixel.  That means we can pack 2 pixels into each byte of buffer, so the buffer only needs to be 1/2 the size of physical pixel layout of the panel.
+
+To make things even easier, when shifting pixel color bits into the display, you shift in data for 2 pixels; one if the upper half and a corresponding row in the lower half.  So each byte of the buffer contains 2 pixels - one in th eupper half and one in the lower half.  To be more specific:
+```  
+  (an arbitrary buffer byte)
+    BIT  7  6  5  4  3  2  1  0
+         |  |  |  |  |  |  |  |
+         |  |  |  |  |  |  |  +--> unused
+         |  |  |  |  |  |  +-----> unused
+         |  |  |  |  |  +--------> The "red" bit for the upper half pixel
+         |  |  |  |  +-----------> The "green" bit for the upper half pixel
+         |  |  |  +--------------> The "blue" bit for the upper half pixel
+         |  |  +-----------------> The "red" bit for the lower half pixel
+         |  +--------------------> The "green" bit for the lower half pixel
+         +-----------------------> The "blue" bit for the lower half pixel
+```  
+This makes the update routine to the physical display very clean if we can copy each byte directly into a PORTx register.  Doing 6 individual bit operations on Arduino pins (especially using the Arduino `digitalWrite()` method) would take considerably more time than something like `PORTD = buffer[thisPixel]`.
+
+There are two unused bits in each byte.  Looking at `PORTD` on the ATMega328, we see that alternate functions for pins 0 and 1 on that port are for the UART TX and RX signals.  That's why the buffer has the color bits shifted left 2 - to keep UART pins free.
+
+The framebuffer is then 1/2 of the product of the rows and columns of the display.  This display is 32 X 16 pixels, so that makes for a 256 byte buffer.  This leave plenty of room for a second for double-buffering, necessary to keep the display from "flickering" as things are drawn.  A total of 512 bytes out of the total 2048 available leaves enough for creating programming :)
+
 # Motivation
 I was digging through my parts drawers when I came across the display panel.  I bought it from Adafruit some time ago for a project I never finished (sigh).  I went to the products page on Adafruit to remind myself what it was capable of: [Medium 16x32 RGB LED matrix panel - 6mm pitch](https://www.adafruit.com/product/420).
 
@@ -134,4 +157,4 @@ Sure, if you want to do full 12-bit color, you'll need that much RAM, but what i
 
 I've also seen writeups that will say you need high speed microcontrollers or even an FPGA to drive them.  Can I do it with the resources of an ATMega32?  This MCU family are 8-bit AVRs running at 16MHZ with 2KB of RAM and 32KB of Flash memory.  
 
-I happened to have some UNO-style boards in the same drawer, so I decided to give it a try.
+I happened to have some UNO-style boards in the same drawer, so I decided to give it a try.  This library is the result!
