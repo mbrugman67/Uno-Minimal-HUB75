@@ -1,11 +1,31 @@
+/**********************************************************
+ * @file    panel.cpp
+ * @author  M.Brugman (mattb@linux.com)
+ * @license MIT (see license.txt)
+ **********************************************************
+ * This is an Arduino library for driving a 32 X 16 HUB75
+ * panel using an Arduino Uno type board.
+ * 
+ * The MCU is an 8-bit AVR running at 16MHz; it only has
+ * 2K of RAM of 32K of Flash.  The challenge, obviously,
+ * is to drive a the panel using the limited resources.
+ * 
+ * This library displays 3-bit colors (8 colors) using a
+ * double buffered framebuffer to prevent flickering.  
+ * Ideally, it will be using hardware timer 2 for updates,
+ * but can optionally be updated in the caller's main
+ * loop.
+**********************************************************/
 #include "panel.h"
 #include "panel_impl.h"
 #include "font.h"
 
+#include "Arduino.h"
+
 #define TOPMASK 0x07
 #define BTMMASK 0x70
 
-#define swap(a, b)  {uint8_t t = a; a = b; b = t;}
+#define swap(a, b)  {int16_t t = a; a = b; b = t;}
 
 /********************************************************
 * clear()
@@ -36,39 +56,40 @@ void Panel::fillAll(Panel::Colors c)
 }
 
 /********************************************************
-* setPoint()
+* setPixel()
 *********************************************************
 * Set a single pixel on the panel
 *
 * Parameters:
-*   uint8_t x - the x coordinate
-*   uint8_t y - the y coordinate
+*   int16_t x - the x coordinate
+*   int16_t y - the y coordinate
 *   Panel::Colors color - color to set point
 * Returns
 *   Void
 ********************************************************/
-void Panel::setPoint(uint8_t x, uint8_t y, Panel::Colors color)
+void Panel::setPixel(int16_t x, int16_t y, Panel::Colors color)
 {
-  if (x < COLS && y < ROWS)
+  // only set buffer if in the actual drawable region
+  if (x >= 0 && x < COLS && y >= 0 && y < ROWS)
   {
     this->setBuff(x, y, color);
   }
 }
 
 /********************************************************
-* getPoint()
+* getPixel()
 *********************************************************
 * Get the color of a single pixel on the panel
 *
 * Parameters:
-*   uint8_t x - the x coordinate
-*   uint8_t y - the y coordinate
+*   int16_t x - the x coordinate
+*   int16_t y - the y coordinate
 * Returns
 *   Panel::Colors color - color of the specified pixel
 ********************************************************/
-Panel::Colors Panel::getPoint(uint8_t x, uint8_t y)
+Panel::Colors Panel::getPixel(int16_t x, int16_t y)
 {
-  if (x < COLS && y < ROWS)
+  if (x >= 0 && x < COLS && y >= 0 && y < ROWS)
   {
     // handle coordinate translation
     if (xlatFunc)
@@ -83,24 +104,21 @@ Panel::Colors Panel::getPoint(uint8_t x, uint8_t y)
 }
 
 /********************************************************
-* copyPoint()
+* copyPixel()
 *********************************************************
 * Set a single pixel on the panel
 *
 * Parameters:
-*   uint8_t x1 - the x coordinate of source pixel
-*   uint8_t y1 - the y coordinate of source pixel
-*   uint8_t x2 - the x coordinate of destination pixel
-*   uint8_t y2 - the y coordinate of destination pixel
+*   int16_t x1 - the x coordinate of source pixel
+*   int16_t y1 - the y coordinate of source pixel
+*   int16_t x2 - the x coordinate of destination pixel
+*   int16_t y2 - the y coordinate of destination pixel
 * Returns
 *   Void
 ********************************************************/
-void Panel::copyPoint(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2)
+void Panel::copyPixel(int16_t x1, int16_t y1, int16_t x2, int16_t y2)
 {
-  if (x1 < COLS && x2 < COLS && y1 < ROWS && y2 < ROWS)
-  {
-    this->setPoint(x2, y2, this->getPoint(x1, y2));
-  }
+  this->setPixel(x2, y2, this->getPixel(x1, y2));
 }
 
 /********************************************************
@@ -116,12 +134,11 @@ void Panel::copyPoint(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2)
 ********************************************************/
 void Panel::copyRegion(Panel::Rect& src, Panel::Rect& dst)
 {
-  for(uint8_t hgt = 0; hgt <= (dst.y2 - dst.y1); ++hgt)
+  for(int16_t hgt = 0; hgt <= (dst.y2 - dst.y1); ++hgt)
   {
-    for(uint8_t len = 0; len <= (dst.x2 - dst.x1); ++len)
+    for(int16_t len = 0; len <= (dst.x2 - dst.x1); ++len)
     {
-      // all of the (uint8_t) casts are required because of default integer promotion in c
-      this->copyPoint((uint8_t)(src.x1 + len), (uint8_t)(src.y1 + hgt), (uint8_t)(dst.x1 + len), (uint8_t)(dst.y1 + hgt));
+      this->copyPixel(src.x1 + len, src.y1 + hgt, dst.x1 + len, dst.y1 + hgt);
     }
   }
 }
@@ -133,26 +150,20 @@ void Panel::copyRegion(Panel::Rect& src, Panel::Rect& dst)
 * optionally fill it with a color
 *
 * Parameters:
-*   uint8_t top - the top row (inclusive)
-*   uint8_t left - the left hand side (inclusive)
-*   uint8_t bottom - the bottom row (inclusive)
-*   uint8_t right - the right hand side (inclusive)
+*   int16_t top - the top row (inclusive)
+*   int16_t left - the left hand side (inclusive)
+*   int16_t bottom - the bottom row (inclusive)
+*   int16_t right - the right hand side (inclusive)
 *   Panel::Colors color - line and fill color
 *   bool fill - true to fill with color
 * Returns
 *   Void
 ********************************************************/
-void Panel::rectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, Panel::Colors color, bool fill)
+void Panel::rectangle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors color, bool fill)
 {
-  // sanity checks
-  if (x1 > MAXCOLS)   x1 = MAXCOLS;
-  if (x2 > MAXCOLS)   x2 = MAXCOLS;
-  if (y1 > MAXROWS)   y1 = MAXROWS;
-  if (y2 > MAXROWS)   y2 = MAXROWS;
-
   // fixup backwards dimensions
   if (x1 > x2)     swap(x1, x2)
-  if (y1 > y1)     swap(y1, y2)
+  if (y1 > y2)     swap(y1, y2)
 
   if (fill == false)
   {
@@ -164,11 +175,11 @@ void Panel::rectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, Panel::Col
   else
   {
     // fill in the buffer
-    for (uint8_t col = x1; col <= x2; ++col)
+    for (int16_t col = x1; col <= x2; ++col)
     {
-      for (uint8_t row = y1; row <= y2; ++row)
+      for (int16_t row = y1; row <= y2; ++row)
       {
-        this->setBuff(col, row, color);
+        this->setPixel(col, row, color);
       }
     }
   }
@@ -181,30 +192,25 @@ void Panel::rectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, Panel::Col
 * slope-intercept formula
 *
 * Parameters:
-*   uint8_t x1 - the starting x point
-*   uint8_t y1 - the starting y point
-*   uint8_t x2 - the ending x point
-*   uint8_t y2 - the ending y poing
+*   int16_t x1 - the starting x point
+*   int16_t y1 - the starting y point
+*   int16_t x2 - the ending x point
+*   int16_t y2 - the ending y poing
 *   Panel::Colors color - line and fill color
 *   bool fill - true to fill with color
 * Returns
 *   Void
 ********************************************************/
-void Panel::line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, Panel::Colors color)
+void Panel::line(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors color)
 {
-  if (x1 > MAXCOLS)    x1 = MAXCOLS;
-  if (x2 > MAXCOLS)    x2 = MAXCOLS;
-  if (y1 > MAXROWS)    y1 = MAXROWS;
-  if (y2 > MAXROWS)    y2 = MAXROWS;
-
   // special case of horizontal line
   if (y1 == y2)
   {
     if (x1 > x2)  swap(x1, x2);
 
-    for (uint8_t col = x1; col <= x2; ++col)
+    for (int16_t col = x1; col <= x2; ++col)
     {
-      this->setBuff(col, y1, color);
+      this->setPixel(col, y1, color);
     }
   }
   // special case of vertical line
@@ -212,63 +218,114 @@ void Panel::line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, Panel::Colors c
   {
     if (y1 > y2)  swap(y1, y2);
 
-    for (uint8_t row = y1; row <= y2; ++row)
+    for (int16_t row = y1; row <= y2; ++row)
     {
-      this->setBuff(x1, row, color);
+      this->setPixel(x1, row, color);
     }
   }
   else
-  // slope-intercept time
   {
-    this->setupSlopeIntercept(x1, y1, x2, y2);
+    // slope-intercept time.  Calculate the 'm' and 'b' for
+    // the general y = mx + b line equation.  Scaling by
+    // 100 instead of using floating point, because fp on 
+    // an 8-bit MCU is ridiculously slow
+    int16_t m = ((y2 * 100) - (y1 * 100)) / (x2 - x1);
+    int16_t b = y1 - ((x1 * m) / 100);
 
     if (x1 > x2)    swap(x1, x2);
-    for (uint8_t col = x1; col <= x2; ++col)
+
+    for (int16_t col = x1; col <= x2; ++col)
     {
-      this->setBuff(col, this->calcSlopeIntercept(col), color);
+      this->setPixel(col, (m * col) / 100 + b, color);
     }
   }  
 }
 
-void Panel::drawA(uint8_t x, uint8_t y, Panel::Colors color)
+
+/********************************************************
+* drawChar()
+*********************************************************
+* Draw and ascii character on the panel at the specified
+* coordinates using specified color
+*
+* This method will draw 5x7 pixel bitmapped font 
+* characters on the panel
+*
+* The font characters are stored in flash memory to save
+* RAM; otherwise it would consume another 640 bytes - more
+* than both framebuffers!
+*
+* Paramters:
+*   int16_t x - the X coordinate
+*   int16_t y - the Y coordinate
+*   char chr - character to print
+*   Panel::Colors c - the color
+* Returns
+*   void
+********************************************************/
+void Panel::drawChar(int16_t x, int16_t y, char chr, Panel::Colors c)
 {
-  for (uint8_t col = 0; col < 5; ++col)
+  // array in RAM to hold character retrieved from FLASH
+  uint8_t flashChr[5];
+
+  // cast to unsigned
+  uint8_t inx = (uint8_t)chr;
+
+  // limit to the first 128 characters
+  if (chr > 0x7f) chr = 0x7f;
+
+  // the font is 5 columns by 7 rows
+  for (int16_t ii = 0; ii < 5; ++ii)
   {
-    for (uint8_t row = 0; row < 7; ++row)
-    {
-      if (((figA[col] >> row) & 0x01))
-      {
-        this->setPoint(col + x, y - row, color);
-      }
-    }
+    // read this column's byte from FLASH into RAM
+    flashChr[ii] = pgm_read_byte(&font5x7[inx][ii]);
   }
+
+  // 5 columns by 7 rows
+  for (int16_t col = 0; col < 5; ++col)
+  {
+    for (int16_t row = 0; row < 7; ++row)
+    {
+      // each row is a bit in the column byte
+      if ((flashChr[col] >> row) & 0x01)
+      {
+        // if the bit is set, set the corresponding pixel
+        this->setPixel(col + x, y - row, c);
+      } // is pixel set 
+    } // looping through 7 rows (Y) for this column
+  } // looping through the 5 columns
 }
 
-void Panel::drawB(uint8_t x, uint8_t y, Panel::Colors color)
-{
-  for (uint8_t col = 0; col < 5; ++col)
-  {
-    for (uint8_t row = 0; row < 7; ++row)
-    {
-      if (((figB[col] >> row) & 0x01))
-      {
-        this->setPoint(col + x, y - row, color);
-      }
-    }
-  }
-}
 
-void Panel::drawC(uint8_t x, uint8_t y, Panel::Colors color)
+/********************************************************
+* drawString()
+*********************************************************
+* Draw ascii characters on the panel at the specified
+* coordinates using specified color
+*
+* This method will draw 5x7 pixel bitmapped font 
+* characters on the panel
+*
+* The font characters are stored in flash memory to save
+* RAM; otherwise it would consume another 640 bytes - more
+* than both framebuffers!
+*
+* Paramters:
+*   int16_t x - the X coordinate
+*   int16_t y - the Y coordinate
+*   const char* str - string to print
+*   Panel::Colors c - the color
+* Returns
+*   void
+********************************************************/
+void Panel::drawString(int16_t x, int16_t y, const char* str, Panel::Colors c)
 {
-  for (uint8_t col = 0; col < 5; ++col)
+  for (uint8_t ii = 0; ii < strlen(str); ++ii)
   {
-    for (uint8_t row = 0; row < 7; ++row)
-    {
-      if (((figC[col] >> row) & 0x01))
-      {
-        this->setPoint(col + x, y - row, color);
-      }
-    }
+    this->drawChar(x, y, str[ii], c);
+    
+    // index 6 pixels right for the next char
+    x += 6;
   }
 }
 
@@ -284,13 +341,13 @@ void Panel::drawC(uint8_t x, uint8_t y, Panel::Colors color)
 * init() method
 *
 * Paramters:
-*   uint8_t x - the X coordinate
-*   uint8_t y - the Y coordinate
+*   int16_t x - the X coordinate
+*   int16_t y - the Y coordinate
 *   Panel::Colors c - the color
 * Returns
 *   void
 ********************************************************/
-void Panel::setBuff(uint8_t x, uint8_t y, Panel::Colors c)
+void Panel::setBuff(int16_t x, int16_t y, Panel::Colors c)
 {
   // if a translation method was specified in the init()
   // method, then do that translation
@@ -311,19 +368,38 @@ void Panel::setBuff(uint8_t x, uint8_t y, Panel::Colors c)
   // display
   if (y < HALFROW)
   {
-    pixBuff[y][x] = (uint8_t)((pixBuff[y][x] & BTMMASK) | c) & 0xff;
+    pixBuff[y][x] = ((pixBuff[y][x] & BTMMASK) | c) & 0xff;
   }
   else
   {
-    pixBuff[y - HALFROW][x] = (uint8_t)((pixBuff[y - HALFROW][x] & TOPMASK) | (uint8_t)(c << 4)) & 0xff; 
+    pixBuff[y - HALFROW][x] = ((pixBuff[y - HALFROW][x] & TOPMASK) | (c << 4)) & 0xff; 
   }
 }
 
+
+/********************************************************
+* draw()
+*********************************************************
+* This needs to be called after drawing of the panel is
+* complete so that the buffer can be sent out to the panel
+********************************************************/
 void Panel::draw()
 {
-  TIMSK2 &= ~bit(OCIE2A);
+  // if using ISR for update, disable it during
+  // the memcpy operation to prevent flickering
+  if (usingISR)
+  {
+    TIMSK2 &= ~bit(OCIE2A);
+  }
+  
+  // copy drawing framebuffer to active framebuffer
   memcpy(updBuff, pixBuff, HALFROW * COLS);
-  TIMSK2 |= bit(OCIE2A);
+  
+  // re-enable ISR
+  if (usingISR)
+  {
+    TIMSK2 |= bit(OCIE2A);
+  }
 }
 
 /********************************************************
@@ -344,7 +420,13 @@ void Panel::update()
 {
   for (uint8_t thisRow = 0; thisRow < HALFROW; ++thisRow)
   {
-    this->restControlLines();
+  // clear the control lines
+  SETBIT_CTL(PIN_OE);   // Output enable is active low
+  CLRBIT_CTL(PIN_CLK);
+  CLRBIT_CTL(PIN_LAT);
+  CLRBIT_CTL(PIN_RA);
+  CLRBIT_CTL(PIN_RB);
+  CLRBIT_CTL(PIN_RC);
 
     // get a pointer to the first column of this row
     uint8_t* row = updBuff[thisRow];
@@ -395,11 +477,11 @@ void Panel::update()
 *
 * Parameters:
 *   bool useISR - true to use interrupt timing
-*   (void)(*xlate)(uint8_t& x, uint8_t& y) - translation function
+*   (void)(*xlate)(int16_t& x, int16_t& y) - translation function
 * Returns
 *   Void
 ********************************************************/
-void Panel::begin(bool useISR, void(*xlater)(uint8_t& x, uint8_t& y))
+void Panel::begin(bool useISR, void(*xlater)(int16_t& x, int16_t& y))
 {
   // set up I/O pins
   for (uint8_t ii = 2; ii < 14; ++ii)
@@ -420,6 +502,8 @@ void Panel::begin(bool useISR, void(*xlater)(uint8_t& x, uint8_t& y))
   // using ISR for timing??
   if (useISR)
   {
+    usingISR = true;
+
     TCCR2A = 0;
     bitSet(TCCR2A, WGM21);  // WGM mode CTC, auto reset
     
@@ -432,73 +516,8 @@ void Panel::begin(bool useISR, void(*xlater)(uint8_t& x, uint8_t& y))
     // enable interrupt on A
     TIMSK2 = bit(OCIE2A);  
   }
-}
-
-
-/********************************************************
-* setupSlopeIntercept()
-*********************************************************
-* Set up y = mx + b slope/intercept equation for m and b
-*
-* Call once before drawing a line that is not completely
-* horizontal or vertical
-*
-* Parameters:
-*   uint8_t x1 - the starting x point
-*   uint8_t y1 - the starting y point
-*   uint8_t x2 - the ending x point
-*   uint8_t y2 - the ending y poing
-* Returns
-*   Void
-********************************************************/
-void Panel::setupSlopeIntercept(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2)
-{
-  m = ((((int16_t)y2) * 100) - (((int16_t)y1) * 100)) / ((int16_t)x2 - (int16_t)x1);
-  b = (int16_t)y1 - (((int16_t)x1 * m) / 100);
-}
-
-
-/********************************************************
-* calcSlopeIntercept()
-*********************************************************
-* Calculate the Y for a given X with known m & b
-*
-* Parameters:
-*   uint8_t x - the x coordinate of a line
-* Returns
-*   uint8_t y - the corresponding Y coordinate of the line
-********************************************************/
-uint8_t Panel::calcSlopeIntercept(uint8_t x)
-{
-  int16_t y = (m * (int16_t)x) / 100 + b;
-
-  // sanity check
-  if (y < 0)        y = 1;
-  if (y > MAXROWS)  y = MAXROWS;
-
-  return ((uint8_t)y);
-}
-
-void Panel::restControlLines()
-{
-  // clear the control lines
-  SETBIT_CTL(PIN_OE);   // Output enable is active low
-  CLRBIT_CTL(PIN_CLK);
-  CLRBIT_CTL(PIN_LAT);
-  CLRBIT_CTL(PIN_RA);
-  CLRBIT_CTL(PIN_RB);
-  CLRBIT_CTL(PIN_RC);
-}
-
-void Panel::resetLines()
-{
-  // set all control lines (except OE to low)  CLRBIT_CTL(PIN_CLK);
-  CLRBIT_CTL(PIN_LAT);
-  SETBIT_CTL(PIN_OE);   // Output enable is active low
-  CLRBIT_CTL(PIN_RA);
-  CLRBIT_CTL(PIN_RB);
-  CLRBIT_CTL(PIN_RC);
-
-  // clear the pixel shift register values
-  PORTD &= 0x03;
+  else
+  {
+    usingISR = false;
+  }
 }

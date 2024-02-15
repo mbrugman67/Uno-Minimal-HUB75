@@ -1,13 +1,23 @@
+/**********************************************************
+ * @file    panel_impl.h
+ * @author  M.Brugman (mattb@linux.com)
+ * @license MIT (see license.txt)
+ **********************************************************
+ * This is an Arduino library for driving a 32 X 16 HUB75
+ * panel using an Arduino Uno type board.
+ * 
+ * The MCU is an 8-bit AVR running at 16MHz; it only has
+ * 2K of RAM of 32K of Flash.  The challenge, obviously,
+ * is to drive a the panel using the limited resources.
+ * 
+ * This library displays 3-bit colors (8 colors) using a
+ * double buffered framebuffer to prevent flickering.  
+ * Ideally, it will be using hardware timer 2 for updates,
+ * but can optionally be updated in the caller's main
+ * loop.
+**********************************************************/
 #ifndef PANEL_IMPL_H_
 #define PANEL_IMPL_H_
-
-#ifndef SETBIT_CLR
-#define SETBIT_CLR(a)  (PORTD |= bit(a))
-#endif
-
-#ifndef CLRBIT_CLR
-#define CLRBIT_CLR(a)  (PORTD &= ~bit(a))
-#endif
 
 #ifndef SETBIT_CTL
 #define SETBIT_CTL(a)  (PORTB |= bit(a))
@@ -21,6 +31,8 @@
 #define _NOP() __asm__ __volatile__("nop")
 #endif
 
+// Some definitions for I/O in terms of AVR register
+// defined names, not Arduino pin numbers
 #define PORT_RF PORTD
 #define PORT_GF PORTD
 #define PORT_BF PORTD

@@ -46,22 +46,22 @@ public:
 
   typedef struct
   {
-    uint8_t x;
-    uint8_t y;
+    int16_t x;
+    int16_t y;
   } Point;
 
   typedef struct
   {
-    uint8_t x1;
-    uint8_t y1;
-    uint8_t x2;
-    uint8_t y2;
+    int16_t x1;
+    int16_t y1;
+    int16_t x2;
+    int16_t y2;
   } Rect;
 
   Panel() {}
   ~Panel() {}
 
-  void begin(bool useISR = true, void(*xlater)(uint8_t& x, uint8_t& y) = NULL);
+  void begin(bool useISR = true, void(*xlater)(int16_t& x, int16_t& y) = NULL);
   
   void draw();
   void update();
@@ -69,44 +69,62 @@ public:
   void clear();
   void fillAll(Panel::Colors c);
 
-  void setPoint(uint8_t x, uint8_t y, Panel::Colors color);
-  void setPoint(Panel::Point& p, Panel::Colors c)
-        { setPoint(p.x, p.y, c); }
+  // polymorphic - pixel is defined by X/Y coordinates or a Point struct
+  void setPixel(int16_t x, int16_t y, Panel::Colors c);
+  void setPixel(Panel::Point& p, Panel::Colors c)
+        { setPixel(p.x, p.y, c); }
 
-  void line(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, Panel::Colors color);
+  // polymorphic - line is defined by a pair of X/Y coordinates or Point structs
+  void line(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors c);
   void line(Panel::Point& start, Panel::Point& end, Panel::Colors c)  
         { line(start.x, start.y, end.x, end.y, c); }
 
-  void rectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, Panel::Colors color, bool fill = true);
+  // polymorphic - rectangle is defined by a pair of X/Y coordinates or 2 Point structs or
+  // a Rect struct
+  void rectangle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors c, bool fill = true);
   void rectangle(Panel::Point& topLeft, Panel::Point& btmRight, Panel::Colors c, bool fill = true)
         { rectangle (topLeft.x, topLeft.y, btmRight.x, btmRight.y, c, fill); }
-  void rectagle(Panel::Rect& rect, Panel::Colors c, bool fill = true)
+  void rectangle(Panel::Rect& rect, Panel::Colors c, bool fill = true)
         { rectangle(rect.x1, rect.y1, rect.x2, rect.y2, c, fill); }
 
-  void copyPoint(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2);
-  void copyPoint(Panel::Point& src, Panel::Point& dst)
-        { copyPoint(src.x, src.y, dst.x, dst.y); }  
+  // according to Arduino library specifications, it is better to provide the user with multiple
+  // methods instead of using a bool to select functionality.
+  void filledBox(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors c)
+        { rectangle(x1, y1, x2, y2, c, true); }
+  void filledBox(Panel::Point& topLeft, Panel::Point& btmRight, Panel::Colors c)
+        { rectangle (topLeft.x, topLeft.y, btmRight.x, btmRight.y, c, true); }
+  void filledBox(Panel::Rect& rect, Panel::Colors c, bool fill = true)
+        { rectangle(rect.x1, rect.y1, rect.x2, rect.y2, c, true); }
+
+  void outlineBox(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors c)
+        { rectangle(x1, y1, x2, y2, c, false); }
+  void outlineBox(Panel::Point& topLeft, Panel::Point& btmRight, Panel::Colors c)
+        { rectangle (topLeft.x, topLeft.y, btmRight.x, btmRight.y, c, false); }
+  void outlineBox(Panel::Rect& rect, Panel::Colors c)
+        { rectangle(rect.x1, rect.y1, rect.x2, rect.y2, c, false); }
+
+  void copyPixel(int16_t x1, int16_t y1, int16_t x2, int16_t y2);
+  void copyPixel(Panel::Point& src, Panel::Point& dst)
+        { copyPixel(src.x, src.y, dst.x, dst.y); }  
   void copyRegion(Panel::Rect& src, Panel::Rect& dst);
 
-  void drawA(uint8_t x, uint8_t y, Panel::Colors color);
-  void drawB(uint8_t x, uint8_t y, Panel::Colors color);
-  void drawC(uint8_t x, uint8_t y, Panel::Colors color);
+  void drawChar(int16_t x, int16_t y, char chr, Panel::Colors c);
+  void drawString(int16_t x, int16_t y, const char* str, Panel::Colors c);
 
-  Panel::Colors getPoint(uint8_t x, uint8_t y);
+  Panel::Colors getPixel(int16_t x, int16_t y);
 
 private:
   uint8_t pixBuff[HALFROW][COLS];
   uint8_t updBuff[HALFROW][COLS];
+  bool usingISR;
 
-  void (*xlatFunc)(uint8_t& x, uint8_t& y);
+  // pointer to the translator method provided by begin().  If none
+  // provided, begin() will set this to NULL
+  void (*xlatFunc)(int16_t& x, int16_t& y);
 
-  int16_t m;  // the "m" in y = mx + b
-  int16_t b;  // the "b" in y = mx + b
-
-  void setBuff(uint8_t x, uint8_t y, Panel::Colors c);
-  void resetLines();
-  void restControlLines();
-  void setupSlopeIntercept(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2);
-  uint8_t calcSlopeIntercept(uint8_t x);
+  // internal method to set the display buffer.  Does all sanity checking, 
+  // so all drawing should come down to this instead of directly writing to
+  // any buffer
+  void setBuff(int16_t x, int16_t y, Panel::Colors c);
 };
 #endif // PANEL_H_
