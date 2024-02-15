@@ -1,6 +1,8 @@
 # Minimal UNO HUB75 display driver
 This library will control one 32x16 HUB75 display using an Arduino UNO style board.  The libarary will do 8 color (3 bit) display using a double-buffered framebuffer to prevent flickering.  Ideally, the updates will be performed in the Timer 2 ISR, but can optionally be done in the caller's main loop.
 
+[YouTube video of example sketch running](https://youtu.be/jEmuBJi1XkA)
+
 ### Features
 The library provides drawing primitives such as individual pixel write/read, arbitrary lines, and filled and unfilled rectangles in the colors black, red, yellow, green, cyan, magenta, blue, and white.  There are methods to fill the entire display, copy single pixels and even rectangular regions across the display.  There is a bitmapped 5x7 font available for writing text on the display.
 
@@ -139,6 +141,9 @@ To make things even easier, when shifting pixel color bits into the display, you
          +-----------------------> The "blue" bit for the lower half pixel
 ```  
 This makes the update routine to the physical display very clean if we can copy each byte directly into a PORTx register.  Doing 6 individual bit operations on Arduino pins (especially using the Arduino `digitalWrite()` method) would take considerably more time than something like `PORTD = buffer[thisPixel]`.
+
+Using another pin for timing, I used a scope to measure the actual time required to update the entire panel - it came out to 440 us (microseconds):  
+![An oscilloscope trace image](./doc/timing.bmp)
 
 There are two unused bits in each byte.  Looking at `PORTD` on the ATMega328, we see that alternate functions for pins 0 and 1 on that port are for the UART TX and RX signals.  That's why the buffer has the color bits shifted left 2 - to keep UART pins free.
 
