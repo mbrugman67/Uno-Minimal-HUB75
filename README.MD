@@ -1,7 +1,12 @@
 # Minimal UNO HUB75 display driver
 This library will control one 32x16 HUB75 display using an Arduino UNO style board.  The libarary will do 8 color (3 bit) display using a double-buffered framebuffer to prevent flickering.  Ideally, the updates will be performed in the Timer 2 ISR, but can optionally be done in the caller's main loop.
 
-[YouTube video of example sketch running](https://youtu.be/jEmuBJi1XkA)
+Click image below for a YouTube video of panel running simple animation:  
+[![video thumbnail](./extras/thumbnail.png)](https://youtu.be/FURhSpXdA1c)
+
+Note that the library provides two methods for updating the display; each requires calling the `update()` method.  The first is to do it on your own time - for example, putting a single `update()` call in the sketch's main `loop()` function.  This will result is a brighter display, but it will be inconsistently bright; that is, it will look a little flicker-y because the timing of the updates won't be consistent from one pass to the next.
+
+The other method is to use a hardware timer and call `update()` in the ISR for that timer.  This provides much more consistent update timing.  It probably won't be as bright, but it will look more "steady".  More info on this below.
 
 ### Features
 The library provides drawing primitives such as individual pixel write/read, arbitrary lines, and filled and unfilled rectangles in the colors black, red, yellow, green, cyan, magenta, blue, and white.  There are methods to fill the entire display, copy single pixels and even rectangular regions across the display.  There is a bitmapped 5x7 font available for writing text on the display.
@@ -14,7 +19,7 @@ The library uses 12 pins of the Uno to drive the HUB75 display.  Use Google or o
 
 The 6 color output pins are in sequential order on AVR hardware port B to make shifting color data in faster.  Also, note that PORTD pins 0 and 1 (Arduino pins 0 and 1) are not used; this leaves the TX and RX signals of UART 0 free.
 
-| AVR Port | AVR Pin | Arduino Pin | HUB75 Display | Description | 
+| AVR Port | AVR Pin | Arduino UNO Pin | HUB75 Display | Description | 
 | --- | --- | --- | --- | --- |   
 | Port D | Pin 2 | 2 | R1 | Red 1 (upper half red) |  
 | Port D | Pin 3 | 3 | G1 | Green 1 (upper half green) |  
@@ -36,14 +41,16 @@ Instantiate a member of the Panel class.  The `begin()` method takes two argumen
 
 Once instantiated, "draw" on the panel by using the included primitives or even pixel-by-pixel.  When the desired items are drawn, call the `draw()` method to copy the working frambuffer to the output framebuffer; this double-buffering prevents flickering.
 
-The `update()` method needs to be called periodically; either as part of the Timer 2 ISR if desired, or as part of your application's main loop.  For example, if using the ISR:  
+The `update()` method needs to be called periodically; either as part of the Timer 2 ISR if desired, or as part of your application's main loop.  
 
-```
+If using the ISR method (which is preferred), you must add this to your sketch:  
+``` 
 ISR(TIMER2_COMPA_vect, ISR_BLOCK)
 {
   panel.update();
 }
 ```  
+*Change the name of the class instance `panel` to whatever you are using.*  
 ### Enums
 There is one enumeration for color:
 ```   
@@ -61,7 +68,7 @@ enum Colors
 ```   
 All of the primitive methods for drawing or printing on the display are expecting a member of this enum for the color parameter.
 ### Structs
-There are two structures used by the library:  the `Point` and the `Rect` structs.  `Point` defines a point in terms of `X/Y` coordinates, and `Rect` defines a rectangular region defined by the four corner `X/Y` coordinates:
+There are two structures used by the library:  the `Point` and the `Rect` structs.  `Point` defines a point in terms of `X/Y` coordinates, and `Rect` defines a rectangular region defined by the two opposite corner `X/Y` coordinates:
 ```   
 typedef struct
 {
@@ -143,7 +150,7 @@ To make things even easier, when shifting pixel color bits into the display, you
 This makes the update routine to the physical display very clean if we can copy each byte directly into a PORTx register.  Doing 6 individual bit operations on Arduino pins (especially using the Arduino `digitalWrite()` method) would take considerably more time than something like `PORTD = buffer[thisPixel]`.
 
 Using another pin for timing, I used a scope to measure the actual time required to update the entire panel - it came out to 440 us (microseconds):  
-![An oscilloscope trace image](./doc/timing.bmp)
+![An oscilloscope trace image](./extras/timing.bmp)
 
 There are two unused bits in each byte.  Looking at `PORTD` on the ATMega328, we see that alternate functions for pins 0 and 1 on that port are for the UART TX and RX signals.  That's why the buffer has the color bits shifted left 2 - to keep UART pins free.
 

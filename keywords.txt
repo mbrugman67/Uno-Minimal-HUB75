@@ -5,39 +5,46 @@
 #######################################
 # Datatypes (KEYWORD1)
 #######################################
-Panel KEYWORD1
+Panel	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
-update KEYWORD2
-fillAll KEYWORD2
-setPoint KEYWORD2
-line KEYWORD2
-rectangle KEYWORD2
-copyPoint KEYWORD2
-copyRegion KEYWORD2
+update	KEYWORD2
+draw	KEYWORD2
+clear	KEYWORD2
+fillAll	KEYWORD2
+setPixel	KEYWORD2
+getPixel	KEYWORD2
+line	KEYWORD2
+rectangle	KEYWORD2
+filledBox	KEYWORD2
+outlineBox	KEYWORD2
+copyPixel	KEYWORD2
+copyRegion	KEYWORD2
+drawChar	KEYWORD2
+drawString	KEYWORD2
 
 #######################################
 # Structs (KEYWORD3)
 #######################################
-Point KEYWORD3
-Rect KEYWORD3
+Point	KEYWORD3
+Rect	KEYWORD3
 
 #######################################
 # Constants (LITERAL1)
 #######################################
-COLS LITERAL1
-ROWS LITERAL1
-MAXCOLS LITERAL1
-MAXROWS LITERAL1
-HALFROW LITERAL1
-Colors LITERAL1
-BLACK LITERAL1
-RED LITERAL1
-GREEN LITERAL1
-YELLOW LITERAL1
-BLUE LITERAL1
-MAGENTA LITERAL1
-CYAN LITERAL1
-WHITE LITERAL1
+COLS	LITERAL1
+ROWS	LITERAL1
+MAXCOLS	LITERAL1
+MAXROWS	LITERAL1
+HALFROW	LITERAL1
+Colors	LITERAL1
+BLACK	LITERAL1
+RED	LITERAL1
+GREEN	LITERAL1
+YELLOW	LITERAL1
+BLUE	LITERAL1
+MAGENTA	LITERAL1
+CYAN	LITERAL1
+WHITE	LITERAL1

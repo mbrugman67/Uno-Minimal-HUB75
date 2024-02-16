@@ -16,8 +16,8 @@
  * but can optionally be updated in the caller's main
  * loop.
 **********************************************************/
-#include "panel.h"
-#include "panel_impl.h"
+#include "Uno_HUB75_Driver.h"
+#include "Uno_HUB75_Driver_impl.h"
 #include "font.h"
 
 #include "Arduino.h"
@@ -32,9 +32,9 @@
 *********************************************************
 * Make the whole display black
 ********************************************************/
-void Panel::clear()
+void Uno_HUB75_Driver::clear()
 {
-  this->fillAll(Panel::BLACK);
+  this->fillAll(Uno_HUB75_Driver::BLACK);
 }
 
 /********************************************************
@@ -44,14 +44,14 @@ void Panel::clear()
 * background
 *
 * Parameters:
-*   Panel::Colors color - a member of the colors enumeration
+*   Uno_HUB75_Driver::Colors color - a member of the colors enumeration
 *     to fill the panel with
 * Returns
 *   Void
 ********************************************************/
-void Panel::fillAll(Panel::Colors c)
+void Uno_HUB75_Driver::fillAll(Uno_HUB75_Driver::Colors c)
 {
-  uint8_t val = (uint8_t)c | (uint8_t)c << 4;
+  uint8_t val = (uint8_t)c << 2 | (uint8_t)c << 5;
   memset(pixBuff, val, HALFROW * COLS);
 }
 
@@ -63,11 +63,11 @@ void Panel::fillAll(Panel::Colors c)
 * Parameters:
 *   int16_t x - the x coordinate
 *   int16_t y - the y coordinate
-*   Panel::Colors color - color to set point
+*   Uno_HUB75_Driver::Colors color - color to set point
 * Returns
 *   Void
 ********************************************************/
-void Panel::setPixel(int16_t x, int16_t y, Panel::Colors color)
+void Uno_HUB75_Driver::setPixel(int16_t x, int16_t y, Uno_HUB75_Driver::Colors color)
 {
   // only set buffer if in the actual drawable region
   if (x >= 0 && x < COLS && y >= 0 && y < ROWS)
@@ -85,9 +85,9 @@ void Panel::setPixel(int16_t x, int16_t y, Panel::Colors color)
 *   int16_t x - the x coordinate
 *   int16_t y - the y coordinate
 * Returns
-*   Panel::Colors color - color of the specified pixel
+*   Uno_HUB75_Driver::Colors color - color of the specified pixel
 ********************************************************/
-Panel::Colors Panel::getPixel(int16_t x, int16_t y)
+Uno_HUB75_Driver::Colors Uno_HUB75_Driver::getPixel(int16_t x, int16_t y)
 {
   if (x >= 0 && x < COLS && y >= 0 && y < ROWS)
   {
@@ -97,10 +97,10 @@ Panel::Colors Panel::getPixel(int16_t x, int16_t y)
       this->xlatFunc(x, y);
     }
 
-    return ((Panel::Colors)pixBuff[y][x]);
+    return ((Uno_HUB75_Driver::Colors)pixBuff[y][x]);
   }
   
-  return (Panel::BLACK);
+  return (Uno_HUB75_Driver::BLACK);
 }
 
 /********************************************************
@@ -116,7 +116,7 @@ Panel::Colors Panel::getPixel(int16_t x, int16_t y)
 * Returns
 *   Void
 ********************************************************/
-void Panel::copyPixel(int16_t x1, int16_t y1, int16_t x2, int16_t y2)
+void Uno_HUB75_Driver::copyPixel(int16_t x1, int16_t y1, int16_t x2, int16_t y2)
 {
   this->setPixel(x2, y2, this->getPixel(x1, y2));
 }
@@ -127,12 +127,12 @@ void Panel::copyPixel(int16_t x1, int16_t y1, int16_t x2, int16_t y2)
 * Copy the colors of a rectangle to another rectangle
 *
 * Parameters:
-*   Panel::Rect src - reference to source region
-*   Panel::Rect dst - reference to destination region
+*   Uno_HUB75_Driver::Rect src - reference to source region
+*   Uno_HUB75_Driver::Rect dst - reference to destination region
 * Returns
 *   Void
 ********************************************************/
-void Panel::copyRegion(Panel::Rect& src, Panel::Rect& dst)
+void Uno_HUB75_Driver::copyRegion(Uno_HUB75_Driver::Rect& src, Uno_HUB75_Driver::Rect& dst)
 {
   for(int16_t hgt = 0; hgt <= (dst.y2 - dst.y1); ++hgt)
   {
@@ -154,12 +154,12 @@ void Panel::copyRegion(Panel::Rect& src, Panel::Rect& dst)
 *   int16_t left - the left hand side (inclusive)
 *   int16_t bottom - the bottom row (inclusive)
 *   int16_t right - the right hand side (inclusive)
-*   Panel::Colors color - line and fill color
+*   Uno_HUB75_Driver::Colors color - line and fill color
 *   bool fill - true to fill with color
 * Returns
 *   Void
 ********************************************************/
-void Panel::rectangle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors color, bool fill)
+void Uno_HUB75_Driver::rectangle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Uno_HUB75_Driver::Colors color, bool fill)
 {
   // fixup backwards dimensions
   if (x1 > x2)     swap(x1, x2)
@@ -196,12 +196,12 @@ void Panel::rectangle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Col
 *   int16_t y1 - the starting y point
 *   int16_t x2 - the ending x point
 *   int16_t y2 - the ending y poing
-*   Panel::Colors color - line and fill color
+*   Uno_HUB75_Driver::Colors color - line and fill color
 *   bool fill - true to fill with color
 * Returns
 *   Void
 ********************************************************/
-void Panel::line(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors color)
+void Uno_HUB75_Driver::line(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Uno_HUB75_Driver::Colors color)
 {
   // special case of horizontal line
   if (y1 == y2)
@@ -259,11 +259,11 @@ void Panel::line(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors c
 *   int16_t x - the X coordinate
 *   int16_t y - the Y coordinate
 *   char chr - character to print
-*   Panel::Colors c - the color
+*   Uno_HUB75_Driver::Colors c - the color
 * Returns
 *   void
 ********************************************************/
-void Panel::drawChar(int16_t x, int16_t y, char chr, Panel::Colors c)
+void Uno_HUB75_Driver::drawChar(int16_t x, int16_t y, char chr, Uno_HUB75_Driver::Colors c)
 {
   // array in RAM to hold character retrieved from FLASH
   uint8_t flashChr[5];
@@ -314,11 +314,11 @@ void Panel::drawChar(int16_t x, int16_t y, char chr, Panel::Colors c)
 *   int16_t x - the X coordinate
 *   int16_t y - the Y coordinate
 *   const char* str - string to print
-*   Panel::Colors c - the color
+*   Uno_HUB75_Driver::Colors c - the color
 * Returns
 *   void
 ********************************************************/
-void Panel::drawString(int16_t x, int16_t y, const char* str, Panel::Colors c)
+void Uno_HUB75_Driver::drawString(int16_t x, int16_t y, const char* str, Uno_HUB75_Driver::Colors c)
 {
   for (uint8_t ii = 0; ii < strlen(str); ++ii)
   {
@@ -343,11 +343,11 @@ void Panel::drawString(int16_t x, int16_t y, const char* str, Panel::Colors c)
 * Paramters:
 *   int16_t x - the X coordinate
 *   int16_t y - the Y coordinate
-*   Panel::Colors c - the color
+*   Uno_HUB75_Driver::Colors c - the color
 * Returns
 *   void
 ********************************************************/
-void Panel::setBuff(int16_t x, int16_t y, Panel::Colors c)
+void Uno_HUB75_Driver::setBuff(int16_t x, int16_t y, Uno_HUB75_Driver::Colors c)
 {
   // if a translation method was specified in the init()
   // method, then do that translation
@@ -386,7 +386,7 @@ void Panel::setBuff(int16_t x, int16_t y, Panel::Colors c)
 * This needs to be called after drawing of the panel is
 * complete so that the buffer can be sent out to the panel
 ********************************************************/
-void Panel::draw()
+void Uno_HUB75_Driver::draw()
 {
   // if using ISR for update, disable it during
   // the memcpy operation to prevent flickering
@@ -419,18 +419,10 @@ void Panel::draw()
 * routine every 2 ms, you will be using just under a 
 * quarter of the horsepower of a ATMega 328.
 ********************************************************/
-void Panel::update()
+void Uno_HUB75_Driver::update()
 {
   for (uint8_t thisRow = 0; thisRow < HALFROW; ++thisRow)
   {
-  // clear the control lines
-  SETBIT_CTL(PIN_OE);   // Output enable is active low
-  CLRBIT_CTL(PIN_CLK);
-  CLRBIT_CTL(PIN_LAT);
-  CLRBIT_CTL(PIN_RA);
-  CLRBIT_CTL(PIN_RB);
-  CLRBIT_CTL(PIN_RC);
-
     // get a pointer to the first column of this row
     uint8_t* row = updBuff[thisRow];
     
@@ -456,13 +448,18 @@ void Panel::update()
       SETBIT_CTL(PIN_CLK);
     }
 
-    // turn off output, set row, then re-enable output
+    // turn off output
+    SETBIT_CTL(PIN_OE);
+
+    // set row
+    PORTB &= ~0x07;
+    PORTB |= thisRow & 0x07;
+
+    // latch this row
     SETBIT_CTL(PIN_LAT);
     CLRBIT_CTL(PIN_LAT);
 
-    SETBIT_CTL(PIN_OE);
-    PORTB &= ~0x07;
-    PORTB |= thisRow & 0x07;
+    // turn output back on
     CLRBIT_CTL(PIN_OE);
 
     // Delay a bit for added PoV brightness of the display.  Could be
@@ -485,7 +482,7 @@ void Panel::update()
 * Returns
 *   Void
 ********************************************************/
-void Panel::begin(bool useISR, void(*xlater)(int16_t& x, int16_t& y))
+void Uno_HUB75_Driver::begin(bool useISR, void(*xlater)(int16_t& x, int16_t& y))
 {
   // set up I/O pins
   for (uint8_t ii = 2; ii < 14; ++ii)
@@ -493,6 +490,14 @@ void Panel::begin(bool useISR, void(*xlater)(int16_t& x, int16_t& y))
     pinMode(ii, OUTPUT);
     digitalWrite(ii, LOW);
   }
+
+  // clear the control lines
+  SETBIT_CTL(PIN_OE);   // Output enable is active low
+  CLRBIT_CTL(PIN_CLK);
+  CLRBIT_CTL(PIN_LAT);
+  CLRBIT_CTL(PIN_RA);
+  CLRBIT_CTL(PIN_RB);
+  CLRBIT_CTL(PIN_RC);
 
   // clear pixel buffer
   this->clear();
