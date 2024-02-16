@@ -37,7 +37,7 @@ The 6 color output pins are in sequential order on AVR hardware port B to make s
 If you need to reassign pins for the HUB75 display, you'll end up editing `panel_impl.h` and `panel.cpp`.  If you want to reassign the pins used for `R1`, `G1`, `B1`, `R2`, `G2`, or `B2` you're going to end up rewriting the `update()` method in such a way that each update to the panel will take more time.  Don't do that.
 
 ## Software
-Instantiate a member of the Panel class.  The `begin()` method takes two arguments (with default values); the first defines if the update method will be called from the Timer 2 ISR, and the second defines a coordinate translation method.
+Instantiate a member of the Uno_HUB75_Driver class.  The `begin()` method takes two arguments (with default values); the first defines if the update method will be called from the Timer 2 ISR, and the second defines a coordinate translation method.
 
 Once instantiated, "draw" on the panel by using the included primitives or even pixel-by-pixel.  When the desired items are drawn, call the `draw()` method to copy the working frambuffer to the output framebuffer; this double-buffering prevents flickering.
 
@@ -103,32 +103,32 @@ This can also be used to translate the coordinate system so the panel can be rot
 `void draw()` - all "drawing" on the panel done by the library methods are done to the local framebuffer and won't actually be written to the display panel until the `draw()` method is called.  This prevents flickering of the display.  Basically, draw whatever you want on the display, then call `draw()` to copy that to the output framebuffer that the `update()` method uses.
 `void clear()` - erases the display by setting all pixels to black (remember to call `draw()` for it to take affect)
 
-`void fillAll(Panel::Colors c)` - sets all pixels in the display to the specified color `c` (see enums and structs section for colors)
+`void fillAll(Uno_HUB75_Driver::Colors c)` - sets all pixels in the display to the specified color `c` (see enums and structs section for colors)
 
-`void setPixel(int16_t x, int16_t y, Panel::Colors c)`  
-`void setPixel(Panel::Point& p, Panel::Colors c)` - both of these set the specified pixel to color `c`
+`void setPixel(int16_t x, int16_t y, Uno_HUB75_Driver::Colors c)`  
+`void setPixel(Uno_HUB75_Driver::Point& p, Uno_HUB75_Driver::Colors c)` - both of these set the specified pixel to color `c`
 
-`void line(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors c)`  
-`void line(Panel::Point& start, Panel::Point& end, Panel::Colors c)` - both of these draw a line on the display, one pixel wide, using color `c`.  Line may be horizontal, vertical, or diagonal.  Non horizontal/vertical lines are drawn using y=mx+b form, but your results may vary on a display with such low resolution.  Lines at 45 degrees look good, but other angles may not be great.
+`void line(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Uno_HUB75_Driver::Colors c)`  
+`void line(Uno_HUB75_Driver::Point& start, Uno_HUB75_Driver::Point& end, Uno_HUB75_Driver::Colors c)` - both of these draw a line on the display, one pixel wide, using color `c`.  Line may be horizontal, vertical, or diagonal.  Non horizontal/vertical lines are drawn using y=mx+b form, but your results may vary on a display with such low resolution.  Lines at 45 degrees look good, but other angles may not be great.
 
-`void rectangle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors c, bool fill = true)`  
-`void rectangle(Panel::Point& topLeft, Panel::Point& btmRight, Panel::Colors c, bool fill = true)`  
-`void rectagle(Panel::Rect& rect, Panel::Colors c, bool fill = true)` - all of these 3 methods will draw a rectangle on the display in color `c`.  If `fill` is set to `true`, the rectangle will be filled with color `c`; otherwise it will be an outline one pixel wide of color `c`.
+`void rectangle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Uno_HUB75_Driver::Colors c, bool fill = true)`  
+`void rectangle(Uno_HUB75_Driver::Point& topLeft, Uno_HUB75_Driver::Point& btmRight, Uno_HUB75_Driver::Colors c, bool fill = true)`  
+`void rectagle(Uno_HUB75_Driver::Rect& rect, Uno_HUB75_Driver::Colors c, bool fill = true)` - all of these 3 methods will draw a rectangle on the display in color `c`.  If `fill` is set to `true`, the rectangle will be filled with color `c`; otherwise it will be an outline one pixel wide of color `c`.
 
-`void filledBox(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors c)`  
-`void filledBox(Panel::Point& topLeft, Panel::Point& btmRight, Panel::Colors c)`  
-`void filledBox(Panel::Rect& rect, Panel::Colors c)` - all of these 3 methods will draw a filled rectangle on the display in color `c`.  
+`void filledBox(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Uno_HUB75_Driver::Colors c)`  
+`void filledBox(Uno_HUB75_Driver::Point& topLeft, Uno_HUB75_Driver::Point& btmRight, Uno_HUB75_Driver::Colors c)`  
+`void filledBox(Uno_HUB75_Driver::Rect& rect, Uno_HUB75_Driver::Colors c)` - all of these 3 methods will draw a filled rectangle on the display in color `c`.  
 
-`void outlineBox(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Panel::Colors c)`  
-`void outlineBox(Panel::Point& topLeft, Panel::Point& btmRight, Panel::Colors c)`  
-`void outlineBox(Panel::Rect& rect, Panel::Colors c)` - all of these 3 methods will draw an unfilled rectangle on the display in color `c`.  
+`void outlineBox(int16_t x1, int16_t y1, int16_t x2, int16_t y2, Uno_HUB75_Driver::Colors c)`  
+`void outlineBox(Uno_HUB75_Driver::Point& topLeft, Uno_HUB75_Driver::Point& btmRight, Uno_HUB75_Driver::Colors c)`  
+`void outlineBox(Uno_HUB75_Driver::Rect& rect, Uno_HUB75_Driver::Colors c)` - all of these 3 methods will draw an unfilled rectangle on the display in color `c`.  
 
 `void copyPixel(int16_t x1, int16_t y1, int16_t x2, int16_t y2)`  
-`void copyPixel(Panel::Point& src, Panel::Point& dst)` - both of these 2 methods can be used to copy a single pixel from one place on the display to another.
+`void copyPixel(Uno_HUB75_Driver::Point& src, Uno_HUB75_Driver::Point& dst)` - both of these 2 methods can be used to copy a single pixel from one place on the display to another.
 
-`void copyRegion(Panel::Rect& src, Panel::Rect& dst)` - copies a rectangular region of the panel from one location to another.  
+`void copyRegion(Uno_HUB75_Driver::Rect& src, Uno_HUB75_Driver::Rect& dst)` - copies a rectangular region of the panel from one location to another.  
 
-`Panel::Colors getPixel(int16_t x, int16_t y)` - return a member of the `Colors` enum for the color of the given pixel
+`Uno_HUB75_Driver::Colors getPixel(int16_t x, int16_t y)` - return a member of the `Colors` enum for the color of the given pixel
 
 # Gorey details of things
 Since this library is only 8 colors, we only need 3 bits to represent those 8 colors for a single pixel.  That means we can pack 2 pixels into each byte of buffer, so the buffer only needs to be 1/2 the size of physical pixel layout of the panel.
