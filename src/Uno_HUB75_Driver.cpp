@@ -97,7 +97,16 @@ Uno_HUB75_Driver::Colors Uno_HUB75_Driver::getPixel(int16_t x, int16_t y)
       this->xlatFunc(x, y);
     }
 
-    return ((Uno_HUB75_Driver::Colors)pixBuff[y][x]);
+    if (y < HALFROW)
+    {
+      // pixel is in the top half, so shift right 2 bits and mask off the lower 3
+      return ((Uno_HUB75_Driver::Colors)((pixBuff[y][x] >> 2) & 0x03));
+    }
+    else
+    {
+      // pixil is in the lower half; shift right 5 bits and mask off the lower 3
+      return ((Uno_HUB75_Driver::Colors)((pixBuff[y][x] >> 5) & 0x03));
+    }
   }
   
   return (Uno_HUB75_Driver::BLACK);
