@@ -1,12 +1,15 @@
 # Minimal UNO HUB75 display driver
-This library will control one 32x16 HUB75 display using an Arduino UNO style board.  The libarary will do 8 color (3 bit) display using a double-buffered framebuffer to prevent flickering.  Ideally, the updates will be performed in the Timer 2 ISR, but can optionally be done in the caller's main loop.
+This library will control one 32x16 HUB75 display using an Arduino UNO style board.  The library will do 8 color (3 bit) display using a double-buffered framebuffer to prevent flickering.  
 
-Click image below for a YouTube video of panel running simple animation:  
+Click image below for a YouTube video of panel running the simpleAnimation sample:  
 [![video thumbnail](./extras/thumbnail.png)](https://youtu.be/FURhSpXdA1c)
+
+Click this image for a YouTube video of panel scrolling text:  
+[![video thumbnail](./extras/thumbnail2.png)](https://youtu.be/J5wVGR9yiaU)  
 
 Note that the library provides two methods for updating the display; each requires calling the `update()` method.  The first is to do it on your own time - for example, putting a single `update()` call in the sketch's main `loop()` function.  This will result is a brighter display, but it will be inconsistently bright; that is, it will look a little flicker-y because the timing of the updates won't be consistent from one pass to the next.
 
-The other method is to use a hardware timer and call `update()` in the ISR for that timer.  This provides much more consistent update timing.  It probably won't be as bright, but it will look more "steady".  More info on this below.
+The other method is to use a hardware timer and call `update()` in the Interrupt Service Routine (ISR) for that timer.  This provides much more consistent update timing.  It probably won't be as bright, but it will look more "steady".  More info on this below.
 
 ### Features
 The library provides drawing primitives such as individual pixel write/read, arbitrary lines, and filled and unfilled rectangles in the colors black, red, yellow, green, cyan, magenta, blue, and white.  There are methods to fill the entire display, copy single pixels and even rectangular regions across the display.  There is a bitmapped 5x7 font available for writing text on the display.
@@ -17,22 +20,22 @@ Simple animations and scrolling can be accomplished by simply redrawing the buff
 ## Hardware
 The library uses 12 pins of the Uno to drive the HUB75 display.  Use Google or other search engine for more information on the hardware interface of HUB75; there are a lot of good resources out there.
 
-The 6 color output pins are in sequential order on AVR hardware port B to make shifting color data in faster.  Also, note that PORTD pins 0 and 1 (Arduino pins 0 and 1) are not used; this leaves the TX and RX signals of UART 0 free.
+The 6 color output pins are in sequential order on AVR hardware port D to make shifting color data in faster.  Also, note that PORTD pins 0 and 1 (Arduino pins 0 and 1) are not used; this leaves the TX and RX signals of UART 0 free.
 
-| AVR Port | AVR Pin | Arduino UNO Pin | HUB75 Display | Description | 
-| --- | --- | --- | --- | --- |   
-| Port D | Pin 2 | 2 | R1 | Red 1 (upper half red) |  
-| Port D | Pin 3 | 3 | G1 | Green 1 (upper half green) |  
-| Port D | Pin 4 | 4 | B1 | Blue 1 (upper half blue) |  
-| Port D | Pin 5 | 5 | R2 | Red 2 (upper half red) |  
-| Port D | Pin 6 | 6 | G2 | Green 2 (upper half green) |  
-| Port D | Pin 7 | 7 | B2 | Blue 2 (upper half blue) |  
-| Port B | Pin 0 | 8 | A | Row 'A' select |  
-| Port B | Pin 1 | 9 | B | Row 'B' select |  
-| Port B | Pin 2 | 10 | C | Row 'C' select |  
-| Port B | Pin 3 | 11 | CLK | bit clock for shifting in color data |  
-| Port B | Pin 4 | 12 | LAT | Latch shift register |  
-| Port B | Pin 5 | 13 | OE | Output enable (active low) |  
+| AVR Port | AVR Pin | Arduino UNO Pin | HUB75 Display | Description |  
+| :---: | :---: | :---: | :---: | --- |   
+| D | 2 | 2 | R1 | Red 1 (upper half red) |  
+| D | 3 | 3 | G1 | Green 1 (upper half green) |  
+| D | 4 | 4 | B1 | Blue 1 (upper half blue) |  
+| D | 5 | 5 | R2 | Red 2 (upper half red) |  
+| D | 6 | 6 | G2 | Green 2 (upper half green) |  
+| D | 7 | 7 | B2 | Blue 2 (upper half blue) |  
+| B | 0 | 8 | A | Row 'A' select |  
+| B | 1 | 9 | B | Row 'B' select |  
+| B | 2 | 10 | C | Row 'C' select |  
+| B | 3 | 11 | CLK | bit clock for shifting in color data |  
+| B | 4 | 12 | LAT | Latch shift register |  
+| B | 5 | 13 | OE | Output enable (active low) |  
 
 If you need to reassign pins for the HUB75 display, you'll end up editing `panel_impl.h` and `panel.cpp`.  If you want to reassign the pins used for `R1`, `G1`, `B1`, `R2`, `G2`, or `B2` you're going to end up rewriting the `update()` method in such a way that each update to the panel will take more time.  Don't do that.
 
